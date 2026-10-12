@@ -61,24 +61,25 @@ run_cli.bat history --limit 50
 | 대시보드 | `/` | 포켓별 자산 현황, 시세 평가, 자산 이동 |
 | 이전 내역 | `/history` | 포켓 간 이전 기록 조회 (자산·상태 필터) |
 
-#### 브랜드 로고 바꾸기
+#### 브랜드 로고
 
-좌측 상단 로고 자리에 업비트 공식 로고를 쓰고 싶다면, 아래 이름 중 하나로
-`upbit_pocket/web/static/` 에 파일을 넣고 서버를 다시 시작하세요.
+좌측 상단에는 업비트 공식 로고(`upbit_pocket/web/static/upbit-logo.png`)를 기본으로 사용합니다.
+
+로고를 교체하려면 아래 이름 중 하나로 같은 폴더에 파일을 넣고 서버를 다시 시작하세요.
+`upbit-logo.svg` > `upbit-logo.png` > `upbit-logo.webp` > `logo.svg` > `logo.png` 순으로 찾습니다.
 
 ```
-upbit-logo.svg   (권장)   upbit-logo.png   upbit-logo.webp   logo.svg   logo.png
+upbit_pocket/web/static/
+  app.css
+  upbit-logo.png     <- 업비트 공식 로고 (192x192, 출처: https://upbit.com/favicon.jpg)
 ```
 
-파일이 있으면 자동으로 로고를 쓰고, 없으면 기본 마크로 돌아갑니다.
+파일이 없으면 기본 마크(`U`)로 돌아가므로, 로고 없이도 앱은 정상 동작합니다.
+로고를 SVG로 교체하면 확대해도 깨지지 않습니다.
 
-```powershell
-# 업비트 공식 이미지 다운로드 후 이름을 upbit-logo.png 으로 저장
-curl.exe -o upbit_pocket\web\static\upbit-logo.png "다운로드한_로고_URL"
-```
-
-로고는 업비트 상표이므로 **저장소에는 포함하지 않습니다** (`.gitignore` 처리됨).
-직접 받은 파일을 로컬에만 두고 쓰세요.
+> 업비트 로고는 두나무(Upbit)의 상표입니다. 이 프로젝트는 업비트 공식 서비스가 아니며,
+> 로고는 어느 거래소 API에 연결했는지 표시하는 용도로만 씁니다.
+> 상업적 용도로 배포한다면 업비트의 브랜드 가이드라인을 확인하세요.
 
 대시보드에서 하는 일:
 
