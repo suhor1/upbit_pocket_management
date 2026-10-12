@@ -14,7 +14,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from upbit_pocket.auth import build_query_string, create_token
 from upbit_pocket.client import UpbitClient
 from upbit_pocket.errors import TransferValidationError
-from upbit_pocket.models import Balance, Market, MarketPrice, Pocket, TransferRequest, format_amount
+from upbit_pocket.models import (
+    Balance,
+    Market,
+    MarketPrice,
+    Pocket,
+    TransferRequest,
+    format_amount,
+    to_api_amount,
+)
 from upbit_pocket.pricing import PriceService
 from upbit_pocket.service import PocketService, PocketSnapshot
 
@@ -268,3 +276,42 @@ def test_transfer_request_payload_omits_empty_identifier():
     request = TransferRequest(MAIN_UUID, SUB1_UUID, "KRW", Decimal("1000"))
     assert "identifier" not in request.to_payload()
     assert request.to_payload()["from"] == MAIN_UUID
+
+
+# ------------------------------------------------- API 요청 수량 포맷 (회귀)
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("1000000", "1000000"),
+        ("0.5", "0.5"),
+        ("0.04748728", "0.04748728"),
+        ("3166805.80007475", "3166805.80007475"),
+        ("1E+3", "1000"),
+        ("0", "0"),
+    ],
+)
+def test_api_amount_has_no_separators(value, expected):
+    """업비트는 쉼표가 들어간 amount를 invalid_parameter로 거절한다."""
+    assert to_api_amount(Decimal(value)) == expected
+    assert "," not in to_api_amount(Decimal(value))
+
+
+def test_api_amount_never_uses_scientific_notation():
+    assert "E" not in to_api_amount(Decimal("1E+9")).upper()
+    assert to_api_amount(Decimal("1E+9")) == "1000000000"
+
+
+def test_transfer_payload_amount_is_api_safe():
+    """표시용 쉼표 포맷이 API 본문에 섞이지 않아야 한다."""
+    request = TransferRequest(MAIN_UUID, SUB1_UUID, "KRW", Decimal("1000000"))
+    amount = request.to_payload()["amount"]
+    assert amount == "1000000"
+    assert "," not in amount
+
+
+def test_display_and_api_formats_differ():
+    value = Decimal("3166805.80007475")
+    assert format_amount(value) == "3,166,805.80007475"
+    assert to_api_amount(value) == "3166805.80007475"

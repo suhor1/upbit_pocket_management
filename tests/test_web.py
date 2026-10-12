@@ -284,3 +284,28 @@ def test_transfer_revalidates_amount_at_execution_time(client):
     )
     assert response.status_code == 400
     assert client.fake.transfers == []
+
+
+# ---------------------------------------------------- API 본문 수량 (회귀)
+
+
+def test_web_transfer_sends_unformatted_amount_to_upbit(client):
+    """화면에는 쉼표가 보여도 업비트 요청 본문에는 없어야 한다.
+
+    쉼표가 들어가면 업비트가 invalid_parameter로 거절한다.
+    """
+    bootstrap_csrf(client)
+    response = post(
+        client,
+        "/api/transfer",
+        {"from": MAIN_UUID, "to": SUB_UUID, "currency": "KRW", "amount": "1000000", "confirmed": True},
+    )
+    assert response.status_code == 200
+
+    payload = client.fake.transfers[0].to_payload()
+    assert payload["amount"] == "1000000"
+    assert "," not in payload["amount"]
+
+    # 화면에는 사람이 읽기 좋은 쉼표 포맷으로 보인다.
+    display = response.get_json()["results"][0]["amount"]
+    assert display == "1,000,000"

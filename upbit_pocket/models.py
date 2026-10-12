@@ -97,7 +97,7 @@ class TransferRequest:
             "from": self.from_uuid,
             "to": self.to_uuid,
             "currency": self.currency,
-            "amount": format_amount(self.amount),
+            "amount": to_api_amount(self.amount),
         }
         if self.identifier:
             payload["identifier"] = self.identifier
@@ -157,8 +157,20 @@ class PriceBook:
 
 
 def format_amount(value: Decimal, places: int = 8) -> str:
-    """Decimal을 지수 표기 없이 문자열로 변환한다."""
+    """표시용 포맷. 천 단위 쉼표가 들어가므로 API 요청에는 절대 쓰지 않는다."""
     text = f"{value:,.{places}f}"
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def to_api_amount(value: Decimal, places: int = 8) -> str:
+    """업비트 API 요청용 포맷.
+
+    쉼표나 지수 표기가 들어가면 업비트가 invalid_parameter로 거절한다.
+    예) 1000000 -> "1000000" (쉼표 없음)
+    """
+    text = f"{value:.{places}f}"
     if "." in text:
         text = text.rstrip("0").rstrip(".")
     return text or "0"
