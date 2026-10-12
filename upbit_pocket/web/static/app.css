@@ -53,10 +53,22 @@ code { font-family: 'SF Mono', 'Cascadia Mono', Consolas, monospace; font-size: 
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700; }
 .brand:hover { text-decoration: none; }
 .brand-mark {
-  width: 28px; height: 28px; border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), #8b5cf6);
-  display: grid; place-items: center; color: #fff; font-size: 15px;
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  flex: 0 0 auto;
 }
+/* 로고 파일이 없을 때만 쓰는 대체 마크 */
+.brand-mark-fallback {
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  color: #fff; font-size: 15px; font-weight: 800;
+}
+.brand-mark img {
+  width: 100%; height: 100%;
+  object-fit: contain; object-position: center;
+  display: block; border-radius: 6px;
+}
+.brand-text { letter-spacing: -0.01em; white-space: nowrap; }
 .nav-links { display: flex; gap: 6px; }
 .nav-links a {
   padding: 7px 14px; border-radius: 8px; color: var(--muted); font-weight: 500;

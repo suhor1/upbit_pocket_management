@@ -1,8 +1,14 @@
 {% macro nav(active) -%}
 <nav class="nav">
   <a class="brand" href="/">
-    <span class="brand-mark">U</span>
-    <span>포켓 관리</span>
+    <span class="brand-mark{% if not brand_logo_url %} brand-mark-fallback{% endif %}">
+      {%- if brand_logo_url -%}
+        <img src="{{ brand_logo_url }}" alt="Upbit" width="28" height="28">
+      {%- else -%}
+        U
+      {%- endif -%}
+    </span>
+    <span class="brand-text">{{ brand_title }}</span>
   </a>
   <div class="nav-links">
     <a href="/" class="{{ 'active' if active == 'dashboard' }}">대시보드</a>

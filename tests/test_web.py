@@ -118,6 +118,56 @@ def test_dashboard_renders_all_pockets(client):
     assert "1,000,000" in body
 
 
+# ------------------------------------------------------------------ 브랜드
+
+
+def test_brand_shows_upbit_pocket_manager_title(client):
+    body = client.get("/").get_data(as_text=True)
+    assert "업비트 포켓 관리" in body
+    assert '<span class="brand-text">업비트 포켓 관리</span>' in body
+
+
+def test_brand_falls_back_to_letter_without_logo_file(client):
+    body = client.get("/").get_data(as_text=True)
+    assert "brand-mark-fallback" in body
+    assert "<img" not in body.split("</nav>")[0]
+
+
+def test_brand_uses_logo_file_when_present(client, tmp_path):
+    logo = tmp_path / "upbit-logo.svg"
+    logo.write_text('<svg xmlns="http://www.w3.org/2000/svg"></svg>', encoding="utf-8")
+
+    from upbit_pocket.web.app import find_brand_logo
+
+    assert find_brand_logo(tmp_path) == "upbit-logo.svg"
+
+    # static 폴더를 임시 디렉터리로 바꿔 로고가 있는 상황을 만든다.
+    original = client.application.static_folder
+    client.application.static_folder = str(tmp_path)
+    try:
+        body = client.get("/").get_data(as_text=True)
+    finally:
+        client.application.static_folder = original
+
+    assert "brand-mark-fallback" not in body
+    assert "upbit-logo.svg" in body
+    assert '<img src="/static/upbit-logo.svg"' in body
+
+
+def test_find_brand_logo_prefers_svg_over_png(tmp_path):
+    (tmp_path / "logo.png").write_bytes(b"\x89PNG")
+    (tmp_path / "upbit-logo.svg").write_text("<svg/>", encoding="utf-8")
+    from upbit_pocket.web.app import find_brand_logo
+
+    assert find_brand_logo(tmp_path) == "upbit-logo.svg"
+
+
+def test_find_brand_logo_returns_none_when_missing(tmp_path):
+    from upbit_pocket.web.app import find_brand_logo
+
+    assert find_brand_logo(tmp_path) is None
+
+
 def test_history_page_renders(client):
     response = client.get("/history")
     assert response.status_code == 200

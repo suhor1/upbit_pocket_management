@@ -8,7 +8,7 @@
   <meta name="csrf-token" content="{{ csrf_token }}">
 </head>
 <body>
-  {% import '_macros.html' as ui %}
+  {% import '_macros.html' as ui with context %}
   {{ ui.nav(nav_active | default('')) }}
   <main class="page">
     {% block content %}{% endblock %}

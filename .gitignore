@@ -24,6 +24,10 @@ secrets.json
 *.db
 *.sqlite3
 
+# 상표 리소스 - 업비트 로고 등은 사용자가 직접 넣고 커밋하지 않는다
+upbit_pocket/web/static/upbit-logo.*
+upbit_pocket/web/static/logo.*
+
 # 에디터 / OS
 .idea/
 .vscode/

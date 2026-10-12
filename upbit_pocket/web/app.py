@@ -2,11 +2,31 @@
 
 from __future__ import annotations
 
-from flask import Flask, render_template
+from pathlib import Path
+
+from flask import Flask, render_template, url_for
 
 from ..config import Settings
 from ..errors import UpbitPocketError
 from .routes import bp
+
+# 이 중 하나가 static/ 에 있으면 네비 바닥의 브랜드 마크로 사용한다.
+# 업비트 로고는 상표이므로 저장소에 포함하지 않고, 사용자가 직접 넣어준다.
+LOGO_FILENAMES = (
+    "upbit-logo.svg",
+    "upbit-logo.png",
+    "upbit-logo.webp",
+    "logo.svg",
+    "logo.png",
+)
+
+
+def find_brand_logo(static_dir: str | Path) -> str | None:
+    static_path = Path(static_dir)
+    for filename in LOGO_FILENAMES:
+        if (static_path / filename).is_file():
+            return filename
+    return None
 
 
 def create_app(settings: Settings | None = None, **overrides) -> Flask:
@@ -17,6 +37,14 @@ def create_app(settings: Settings | None = None, **overrides) -> Flask:
     app.config.update(overrides)
 
     app.register_blueprint(bp)
+
+    @app.context_processor
+    def inject_brand():
+        logo = find_brand_logo(app.static_folder)
+        return {
+            "brand_logo_url": url_for("static", filename=logo) if logo else None,
+            "brand_title": "업비트 포켓 관리",
+        }
 
     @app.errorhandler(UpbitPocketError)
     def handle_error(exc: UpbitPocketError):
