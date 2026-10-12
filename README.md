@@ -3,15 +3,58 @@
 업비트 공식 API를 이용해 **메인포켓 / 서브포켓**의 자산을 조회하고,
 포켓 간 자산 이동을 수행하는 도구입니다.
 
-브라우저에서 쓰는 **웹 UI**(`web.py`)와 터미널에서 쓰는 **CLI**(`main.py`) 두 가지 진입점을 제공합니다.
+브라우저에서 쓰는 **웹 UI**와 터미널에서 쓰는 **CLI** 두 가지 진입점을 제공합니다.
+두 진입점이 같은 도메인 로직(`upbit_pocket/service.py`)을 공유합니다.
 
-## 빠른 시작 (웹 UI)
+## 빠른 시작
 
-```bash
-pip install -r requirements.txt
-copy .env.example .env          # Access Key / Secret Key 입력
-python web.py                   # http://127.0.0.1:5000 자동 실행
+Windows에서는 `.bat` 파일을 더블클릭만 하면 됩니다.
+가상환경(`.venv`)이 없으면 자동으로 만들고, 필요한 패키지도 자동으로 설치합니다.
+
+| 파일 | 용도 |
+| --- | --- |
+| **`setup.bat`** | 최초 1회 설정 — 가상환경 생성, 패키지 설치, `.env` 생성 |
+| **`run_web.bat`** | 웹 UI 실행 → http://127.0.0.1:5000 |
+| **`run_cli.bat`** | 터미널 실행 (`run_cli.bat check` 처럼 인자를 넘김) |
+
+### 1. 최초 설정
+
+```bat
+setup.bat
 ```
+
+가상환경을 만들고, `requirements.txt`를 설치하고, `.env.example`을 `.env`로 복사한 뒤
+메모장으로 열어 API Key를 입력할 수 있게 안내합니다.
+
+### 2. 웹 UI 실행
+
+```bat
+run_web.bat
+```
+
+브라우저가 자동으로 열립니다. 이미 실행 중이면 포트 충돌이 나므로 창을 먼저 닫아주세요.
+
+### 3. 터미널 실행
+
+```bat
+run_cli.bat                 REM 자산 현황
+run_cli.bat check           REM 연결/권한 점검
+run_cli.bat pockets         REM 포켓 목록
+run_cli.bat move            REM 특정 자산 이동 (드라이런)
+run_cli.bat move-all --execute
+run_cli.bat history --limit 50
+```
+
+수동으로 실행하려면 가상환경 파이썬을 직접 쓰면 됩니다.
+
+```powershell
+.\.venv\Scripts\python.exe web.py
+.\.venv\Scripts\python.exe main.py status
+```
+
+가상환경 없이 시스템 파이썬으로 실행하려면 먼저 `pip install -r requirements.txt`를 하면 됩니다.
+
+### 웹 화면
 
 | 페이지 | 경로 | 설명 |
 | --- | --- | --- |
@@ -36,6 +79,8 @@ python web.py                   # http://127.0.0.1:5000 자동 실행
 | `python main.py move-all` | 출발 포켓의 자산 전체를 다른 포켓으로 이동 |
 | `python main.py history` | 포켓 자산 이전 내역 조회 |
 
+배치 파일로는 `run_cli.bat check`처럼 같은 인자를 그대로 넘기면 됩니다.
+
 ## 준비 사항
 
 ### 1. API Key 발급
@@ -52,13 +97,18 @@ python web.py                   # http://127.0.0.1:5000 자동 실행
 
 ### 3. 설치
 
-```bash
-pip install -r requirements.txt
+`setup.bat`을 실행하면 가상환경 생성과 패키지 설치가 한 번에 끝납니다.
+수동으로 하려면:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 ### 4. 환경 설정
 
-`.env.example`을 `.env`으로 복사하고 값을 입력합니다. `.env`는 git에 커밋되지 않습니다.
+`setup.bat`이 `.env.example`을 `.env`로 복사해 줍니다. 값을 채워 넣으세요.
+`.env`는 `.gitignore`에 등록되어 있어 git에 커밋되지 않습니다.
 
 ```
 UPBIT_OPEN_API_ACCESS_KEY=발급받은 Access Key
@@ -70,7 +120,7 @@ UPBIT_OPEN_API_SECRET_KEY=발급받은 Secret Key
 ```powershell
 $env:UPBIT_OPEN_API_ACCESS_KEY="..."
 $env:UPBIT_OPEN_API_SECRET_KEY="..."
-python web.py
+.\.venv\Scripts\python.exe web.py
 ```
 
 영구 등록하면 키가 디스크에 남지 않습니다.
@@ -82,10 +132,12 @@ python web.py
 
 ## 웹 UI 옵션
 
-```bash
-python web.py --port 8080        # 포트 변경 (기본 5000)
-python web.py --no-browser       # 브라우저 자동 실행 안 함
-python web.py --env-file .env.local
+`run_web.bat`은 인자를 받지 않으므로, 포트 등 옵션을 쓰려면 파이썬을 직접 실행하세요.
+
+```powershell
+.\.venv\Scripts\python.exe web.py --port 8080        # 포트 변경 (기본 5000)
+.\.venv\Scripts\python.exe web.py --no-browser       # 브라우저 자동 실행 안 함
+.\.venv\Scripts\python.exe web.py --env-file .env.local
 ```
 
 기본 바인딩은 `127.0.0.1`이라 **내 PC에서만** 접속됩니다.
@@ -182,6 +234,9 @@ python main.py history --from-pocket 메인포켓 --to-pocket 단기
 ## 구조
 
 ```
+setup.bat                  최초 1회 설정 (가상환경 + 패키지 + .env)
+run_web.bat                웹 UI 실행
+run_cli.bat                터미널 실행 (인자 전달)
 main.py                    터미널 CLI 진입점
 web.py                     웹 UI 진입점 (Flask)
 upbit_pocket/
@@ -202,13 +257,24 @@ upbit_pocket/
 tests/
   test_pocket.py           도메인 로직 20개
   test_web.py              웹 라우트 18개 (CSRF·재검증 포함)
+.venv/                     가상환경 (git에 커밋되지 않음)
 ```
 
 ## 테스트
 
-```bash
-python -m pytest tests -q
+`pytest`는 개발용 의존성이므로 `requirements-dev.txt`에 있습니다.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest tests -q
 ```
+
+## 개발 메모
+
+* `.bat` 파일은 **ASCII만 사용**합니다. `cmd.exe`가 코드페이지(CP949 등)로 파일을 읽기 때문에
+  UTF-8로 저장된 한글 주석이 들어가면 스크립트 자체가 깨집니다. 한글 안내는 Python이 출력합니다.
+* 배치 안에서 `&&` / `||` 로 괄호 묶은 명령을 잇는 문법은 피합니다 (`goto` + 라벨을 씁니다).
+* 가상환경을 지우고 다시 만들려면 `.venv` 폴더만 삭제하면 됩니다. 그다음 `setup.bat`.
 
 ## 주의
 

@@ -1,10 +1,32 @@
+# 가상환경
 .venv/
 venv/
+ENV/
+env/
+
+# Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# 민감 정보 - 절대 커밋하지 말 것
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets.json
+
+# 로그 / 데이터
+*.log
 *.db
-.DS_Store
-Thumbs.db
+*.sqlite3
+
+# 에디터 / OS
 .idea/
 .vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
