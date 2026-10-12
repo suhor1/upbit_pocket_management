@@ -43,6 +43,9 @@ def snapshot_context(service: PocketService) -> dict:
     names = service.market_names()
 
     total = Decimal("0")
+    krw_total = Decimal("0")
+    crypto_total = Decimal("0")
+    unpriced: dict[str, Decimal] = {}
     pocket_rows = []
     for snap in snapshots:
         subtotal = Decimal("0")
@@ -52,6 +55,13 @@ def snapshot_context(service: PocketService) -> dict:
             valuation = balance.balance * price if price is not None else None
             if valuation is not None:
                 subtotal += valuation
+                if balance.currency == "KRW":
+                    krw_total += valuation
+                else:
+                    crypto_total += valuation
+            elif balance.balance > 0:
+                # 시세를 못 잡은 자산은 합계에서 조용히 빠지지 않도록 따로 모은다.
+                unpriced[balance.currency] = unpriced.get(balance.currency, Decimal("0")) + balance.balance
             rows.append(
                 {
                     "currency": balance.currency,
@@ -83,6 +93,15 @@ def snapshot_context(service: PocketService) -> dict:
     return {
         "pockets": pocket_rows,
         "total": f"{total:,.0f}",
+        "krw_total": f"{krw_total:,.0f}",
+        "crypto_total": f"{crypto_total:,.0f}",
+        "pocket_count": len(pocket_rows),
+        "asset_count": sum(p["asset_count"] for p in pocket_rows),
+        "unpriced": [
+            {"currency": code, "balance": format_amount(amount), "name": names.get(code, "")}
+            for code, amount in sorted(unpriced.items())
+        ],
+        "has_unpriced": bool(unpriced),
         "generated_at": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
     }
 

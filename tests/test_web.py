@@ -118,6 +118,77 @@ def test_dashboard_renders_all_pockets(client):
     assert "1,000,000" in body
 
 
+# ------------------------------------------------------------- 합계 / 총액
+
+
+def test_total_sums_every_pocket(client):
+    data = client.get("/api/state").get_json()
+    subtotals = [int(p["subtotal"].replace(",", "")) for p in data["pockets"]]
+    assert int(data["total"].replace(",", "")) == sum(subtotals)
+    assert len(subtotals) == 2
+
+
+def test_total_splits_krw_and_crypto(client):
+    data = client.get("/api/state").get_json()
+    total = int(data["total"].replace(",", ""))
+    krw = int(data["krw_total"].replace(",", ""))
+    crypto = int(data["crypto_total"].replace(",", ""))
+    assert total == krw + crypto
+    # 메인포켓 KRW 1,000,000 + 서브포켓 KRW 10,000
+    assert krw == 1_010_000
+    # BTC 0.5 * 60,000,000
+    assert crypto == 30_000_000
+
+
+def test_total_warns_when_assets_cannot_be_priced(client):
+    """시세를 못 잡은 자산은 합계에서 빠지므로 반드시 알려야 한다."""
+    # ETHF 는 KRW 마켓도 BTC 마켓도 없는 종목이라 시세 조회가 불가능하다.
+    client.fake.get_main_pocket_balances = lambda: [
+        balance("KRW", "1000"),
+        balance("ETHF", "12.5"),
+    ]
+
+    data = client.get("/api/state").get_json()
+    assert data["has_unpriced"] is True
+    assert [u["currency"] for u in data["unpriced"]] == ["ETHF"]
+    assert data["unpriced"][0]["balance"] == "12.5"
+    # 미평가 자산은 합계에 들어가지 않는다 (메인 1,000 + 서브 10,000)
+    assert int(data["total"].replace(",", "")) == 11_000
+
+
+def test_total_reports_no_warning_when_everything_is_priced(client):
+    data = client.get("/api/state").get_json()
+    assert data["has_unpriced"] is False
+    assert data["unpriced"] == []
+
+
+def test_zero_balance_unpriced_asset_is_not_flagged(client):
+    client.fake.get_main_pocket_balances = lambda: [
+        balance("KRW", "1000"),
+        balance("ETHF", "0"),
+    ]
+    data = client.get("/api/state").get_json()
+    assert data["has_unpriced"] is False
+
+
+def test_dashboard_shows_total_and_unpriced_warning(client):
+    client.fake.get_main_pocket_balances = lambda: [
+        balance("KRW", "1000"),
+        balance("ETHF", "12.5"),
+    ]
+    body = client.get("/").get_data(as_text=True)
+    assert "전체 평가금액" in body
+    assert "모든 포켓 합계" in body
+    assert "시세를 확인하지 못한 자산" in body
+    assert "ETHF" in body
+    assert "포함되지 않았습니다" in body
+
+
+def test_dashboard_summary_counts_pockets_and_assets(client):
+    body = client.get("/").get_data(as_text=True)
+    assert "포켓 · 보유자산" in body
+
+
 # ------------------------------------------------------------------ 브랜드
 
 

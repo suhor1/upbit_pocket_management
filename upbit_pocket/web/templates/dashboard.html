@@ -18,15 +18,36 @@
 </header>
 
 <section class="summary">
-  <div class="summary-item">
-    <span class="summary-label">전체 평가금액</span>
+  <div class="summary-item summary-total">
+    <span class="summary-label">전체 평가금액 <em>(모든 포켓 합계)</em></span>
     <strong class="summary-value">{{ total }}<small> KRW</small></strong>
+    <span class="summary-note">메인포켓 {{ pockets | selectattr('is_main') | map(attribute='subtotal') | first }} KRW 포함</span>
   </div>
   <div class="summary-item">
-    <span class="summary-label">포켓</span>
-    <strong class="summary-value">{{ pockets | length }}<small> 개</small></strong>
+    <span class="summary-label">원화 보유</span>
+    <strong class="summary-value summary-value-sm">{{ krw_total }}<small> KRW</small></strong>
+  </div>
+  <div class="summary-item">
+    <span class="summary-label">암호화폐 평가</span>
+    <strong class="summary-value summary-value-sm">{{ crypto_total }}<small> KRW</small></strong>
+  </div>
+  <div class="summary-item">
+    <span class="summary-label">포켓 · 보유자산</span>
+    <strong class="summary-value summary-value-sm">{{ pocket_count }}<small> 개</small> · {{ asset_count }}<small> 종</small></strong>
   </div>
 </section>
+
+{% if has_unpriced %}
+<div class="notice notice-warn">
+  <strong>시세를 확인하지 못한 자산 {{ unpriced | length }}종이 있습니다.</strong>
+  아래 자산은 위 합계에 <em>포함되지 않았습니다</em>. KRW 마켓이 없고 BTC 경유 환산도 불가능한 종목입니다.
+  <ul class="unpriced-list">
+    {% for u in unpriced %}
+    <li><strong>{{ u.currency }}</strong> {{ u.balance }} <span class="muted small">{{ u.name }}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 
 <div id="flash" class="flash" hidden></div>
 

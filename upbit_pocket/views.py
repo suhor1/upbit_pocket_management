@@ -31,6 +31,9 @@ def render_snapshot(
 ) -> str:
     blocks: list[str] = []
     grand_total = Decimal("0")
+    krw_total = Decimal("0")
+    crypto_total = Decimal("0")
+    unpriced: dict[str, Decimal] = {}
 
     for snap in snapshots:
         balances = [b for b in snap.balances if b.has_balance or b.locked > 0]
@@ -46,6 +49,12 @@ def render_snapshot(
             if valuation is not None:
                 subtotal += valuation
                 priced_count += 1
+                if balance.currency == "KRW":
+                    krw_total += valuation
+                else:
+                    crypto_total += valuation
+            elif balance.balance > 0:
+                unpriced[balance.currency] = unpriced.get(balance.currency, Decimal("0")) + balance.balance
 
             name = market_names.get(balance.currency, "")
             rows.append(
@@ -75,7 +84,23 @@ def render_snapshot(
             footer += colorize("  (시세 미확인 자산 제외)", DIM, True)
         blocks.append(f"{header}\n{table}\n{footer}")
 
-    blocks.append(colorize(f"합계 {grand_total:,.0f} KRW", BOLD + CYAN, True))
+    summary = [
+        colorize(f"합계 {grand_total:,.0f} KRW  (모든 포켓)", BOLD + CYAN, True),
+        colorize(f"  원화 {krw_total:,.0f} KRW", CYAN, True),
+        colorize(f"  암호화폐 {crypto_total:,.0f} KRW", CYAN, True),
+    ]
+    if unpriced:
+        codes = ", ".join(
+            f"{code} {format_amount(amount)}" for code, amount in sorted(unpriced.items())
+        )
+        summary.append(
+            colorize(
+                f"  [주의] 시세 미확인 {len(unpriced)}종은 합계에서 제외됨: {codes}",
+                YELLOW,
+                True,
+            )
+        )
+    blocks.append("\n".join(summary))
     return "\n\n".join(blocks)
 
 
