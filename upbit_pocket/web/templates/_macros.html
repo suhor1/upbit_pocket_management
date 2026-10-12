@@ -1,0 +1,16 @@
+{% macro nav(active) -%}
+<nav class="nav">
+  <a class="brand" href="/">
+    <span class="brand-mark">U</span>
+    <span>포켓 관리</span>
+  </a>
+  <div class="nav-links">
+    <a href="/" class="{{ 'active' if active == 'dashboard' }}">대시보드</a>
+    <a href="/history" class="{{ 'active' if active == 'history' }}">이전 내역</a>
+  </div>
+</nav>
+{%- endmacro %}
+
+{% macro status_badge(state, label) -%}
+<span class="badge badge-{{ state }}">{{ label }}</span>
+{%- endmacro %}

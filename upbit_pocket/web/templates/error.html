@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}오류 · 업비트 포켓 관리{% endblock %}
+{% block content %}
+<div class="error-box">
+  <h1>실행할 수 없습니다</h1>
+  <pre>{{ message }}</pre>
+  <p style="margin-top:20px"><a href="/">대시보드로 돌아가기</a></p>
+</div>
+{% endblock %}

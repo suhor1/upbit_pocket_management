@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}업비트 포켓 관리{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body>
+  {% import '_macros.html' as ui %}
+  {{ ui.nav(nav_active | default('')) }}
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
+  <script>window.CSRF_TOKEN = document.querySelector('meta[name=csrf-token]').content;</script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

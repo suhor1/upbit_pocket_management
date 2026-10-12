@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+{% set nav_active = 'dashboard' %}
+{% block title %}대시보드 · 업비트 포켓 관리{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>포켓 자산 현황</h1>
+    <p class="muted">기준 시각 {{ generated_at }}</p>
+  </div>
+  <div class="head-actions">
+    <label class="switch">
+      <input type="checkbox" id="auto-refresh" checked>
+      <span>30초마다 자동 갱신</span>
+    </label>
+    <button class="btn btn-ghost" id="refresh-btn">지금 갱신</button>
+  </div>
+</header>
+
+<section class="summary">
+  <div class="summary-item">
+    <span class="summary-label">전체 평가금액</span>
+    <strong class="summary-value">{{ total }}<small> KRW</small></strong>
+  </div>
+  <div class="summary-item">
+    <span class="summary-label">포켓</span>
+    <strong class="summary-value">{{ pockets | length }}<small> 개</small></strong>
+  </div>
+</section>
+
+<div id="flash" class="flash" hidden></div>
+
+{% if not has_sub_pocket %}
+<div class="notice">
+  서브포켓이 없습니다. 업비트 앱에서 서브포켓을 만든 뒤 새로고침하세요.
+</div>
+{% endif %}
+
+<section class="transfer-panel" id="transfer-panel">
+  <h2>자산 이동</h2>
+  <form id="transfer-form" autocomplete="off">
+    <div class="field-grid">
+      <label class="field">
+        <span>출발 포켓</span>
+        <select name="from" required>
+          {% for p in pockets %}
+          <option value="{{ p.uuid }}">{{ p.name }} ({{ '메인' if p.is_main else '서브' }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field">
+        <span>도착 포켓</span>
+        {% set ns = namespace(picked=false) %}
+        <select name="to" required>
+          {% for p in pockets %}
+            {% set is_default = (not p.is_main and not ns.picked) or (p.is_main and pockets | length == 1) %}
+            {% if is_default %}{% set ns.picked = true %}{% endif %}
+            <option value="{{ p.uuid }}" {{ 'selected' if is_default }}>{{ p.name }} ({{ '메인' if p.is_main else '서브' }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field">
+        <span>자산</span>
+        <select name="currency" id="currency-select" required>
+          <option value="*">전체 자산</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>수량 <em>(비우면 전량)</em></span>
+        <input type="text" name="amount" placeholder="all 또는 0.05" inputmode="decimal">
+      </label>
+    </div>
+
+    <label class="checkline" id="locked-wrap" hidden>
+      <input type="checkbox" name="include_locked">
+      <span>잠긴(locked) 자산까지 포함</span>
+    </label>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary" id="plan-btn">이동 계획 보기</button>
+      <span class="muted small">계획 확인 후에만 실제 이전이 실행됩니다.</span>
+    </div>
+  </form>
+
+  <div id="plan-result" class="plan-result" hidden>
+    <h3>이동 계획</h3>
+    <table class="table" id="plan-table"></table>
+    <div class="actions">
+      <button type="button" class="btn btn-danger" id="execute-btn">위 계획대로 실행</button>
+      <button type="button" class="btn btn-ghost" id="cancel-btn">취소</button>
+    </div>
+  </div>
+
+  <div id="transfer-result" class="plan-result" hidden>
+    <h3>실행 결과</h3>
+    <table class="table" id="result-table"></table>
+    <p class="muted small">최종 상태는 <a href="/history">이전 내역</a>에서 확인하세요.</p>
+  </div>
+</section>
+
+<section class="pockets" id="pockets">
+  {% for p in pockets %}
+  <article class="pocket-card{% if p.is_main %} is-main{% endif %}" data-pocket="{{ p.uuid }}">
+    <header>
+      <div class="pocket-title">
+        <h2>{{ p.name }}</h2>
+        <span class="tag {{ 'tag-main' if p.is_main else 'tag-sub' }}">
+          {{ '메인포켓' if p.is_main else '서브포켓' }}
+        </span>
+      </div>
+      <div class="pocket-meta">
+        <code>{{ p.short_uuid }}…</code>
+        <span class="muted small">{{ p.asset_count }}종 보유</span>
+      </div>
+    </header>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>자산</th>
+          <th class="num">수량</th>
+          <th class="num">잠김</th>
+          <th class="num">매수평균가</th>
+          <th class="num">현재가</th>
+          <th class="num">평가금액</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in p.rows %}
+        <tr class="{{ 'zero' if not r.has_balance }}">
+          <td><strong>{{ r.currency }}</strong> <span class="muted small">{{ r.name }}</span></td>
+          <td class="num">{{ r.balance }}</td>
+          <td class="num">{{ r.locked if r.has_locked else '-' }}</td>
+          <td class="num">{{ r.avg_buy_price ~ ' ' ~ r.unit_currency if r.avg_buy_price not in ('0', '0.0') else '-' }}</td>
+          <td class="num">{{ r.price if r.price else '-' }}</td>
+          <td class="num">{{ r.valuation if r.valuation else '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5">소계</td>
+          <td class="num strong">{{ p.subtotal }} KRW</td>
+        </tr>
+      </tfoot>
+    </table>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PANEL = document.getElementById('transfer-panel');
+const form = document.getElementById('transfer-form');
+const currencySelect = document.getElementById('currency-select');
+const lockedWrap = document.getElementById('locked-wrap');
+const planResult = document.getElementById('plan-result');
+const planTable = document.getElementById('plan-table');
+const resultBox = document.getElementById('transfer-result');
+const resultTable = document.getElementById('result-table');
+const executeBtn = document.getElementById('execute-btn');
+const flash = document.getElementById('flash');
+
+let currentPlan = null;
+
+/* 출발 포켓의 자산 목록으로 선택지를 만든다. */
+function fillCurrencies() {
+  const fromUuid = form.from.value;
+  const card = document.querySelector(`[data-pocket="${fromUuid}"]`);
+  const previous = currencySelect.value;
+  currencySelect.innerHTML = '<option value="*">전체 자산</option>';
+  if (!card) return;
+  card.querySelectorAll('tbody tr').forEach((row) => {
+    if (row.classList.contains('zero')) return;
+    const code = row.querySelector('td strong').textContent.trim();
+    const qty = row.querySelectorAll('td')[1].textContent.trim();
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = `${code} (보유 ${qty})`;
+    currencySelect.appendChild(opt);
+  });
+  if (previous && [...currencySelect.options].some((o) => o.value === previous)) {
+    currencySelect.value = previous;
+  }
+}
+
+function syncAmountState() {
+  const isAll = currencySelect.value === '*';
+  form.amount.disabled = isAll;
+  lockedWrap.hidden = !isAll;
+  if (!isAll) form.amount.required = false;
+}
+
+function showFlash(message, kind) {
+  flash.textContent = message;
+  flash.className = `flash flash-${kind}`;
+  flash.hidden = false;
+  setTimeout(() => { flash.hidden = true; }, 6000);
+}
+
+function postJSON(url, body) {
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.CSRF_TOKEN },
+    body: JSON.stringify(body),
+  }).then((r) => r.json());
+}
+
+function renderPlan(plans) {
+  planTable.innerHTML =
+    '<thead><tr><th>#</th><th>출발</th><th>도착</th><th>자산</th>' +
+    '<th class="num">이전 수량</th><th class="num">가용 잔고</th><th>구분</th></tr></thead><tbody>' +
+    plans.map((p, i) =>
+      `<tr><td>${i + 1}</td><td>${p.from}</td><td>${p.to}</td><td><strong>${p.currency}</strong></td>` +
+      `<td class="num">${p.amount}</td><td class="num">${p.available}</td>` +
+      `<td>${p.is_full ? '전량' : '일부'}</td></tr>`).join('') +
+    '</tbody>';
+  planResult.hidden = false;
+  resultBox.hidden = true;
+}
+
+function renderResults(results) {
+  resultTable.innerHTML =
+    '<thead><tr><th>이전</th><th>자산</th><th class="num">수량</th><th>상태</th><th>요청 UUID</th></tr></thead><tbody>' +
+    results.map((r) =>
+      `<tr><td>${r.route}</td><td><strong>${r.currency}</strong></td><td class="num">${r.amount}</td>` +
+      `<td><span class="badge badge-${r.state}">${r.state}</span></td><td><code>${r.uuid.slice(0, 8)}…</code></td></tr>`).join('') +
+    '</tbody>';
+  planResult.hidden = true;
+  resultBox.hidden = false;
+}
+
+function payload(confirmed) {
+  const data = {
+    from: form.from.value,
+    to: form.to.value,
+    currency: currencySelect.value,
+    amount: form.amount.disabled ? '' : form.amount.value.trim(),
+    include_locked: form.include_locked.checked,
+    confirmed,
+  };
+  return data;
+}
+
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  currentPlan = null;
+  executeBtn.disabled = true;
+  postJSON('/api/plan', payload(false)).then((data) => {
+    if (!data.ok) { showFlash(data.error, 'error'); return; }
+    currentPlan = data.plans;
+    renderPlan(data.plans);
+    executeBtn.disabled = false;
+    executeBtn.focus();
+  });
+});
+
+executeBtn.addEventListener('click', () => {
+  if (!currentPlan || !currentPlan.length) return;
+  const lines = currentPlan.map((p, i) =>
+    `${i + 1}. ${p.from} → ${p.to} : ${p.currency} ${p.amount}`).join('\n');
+  if (!confirm(`다음 ${currentPlan.length}건의 자산 이전을 실행합니다.\n\n${lines}\n\n실행할까요?`)) return;
+
+  executeBtn.disabled = true;
+  executeBtn.textContent = '실행 중…';
+  postJSON('/api/transfer', payload(true)).then((data) => {
+    executeBtn.disabled = false;
+    executeBtn.textContent = '위 계획대로 실행';
+    if (!data.ok) { showFlash(data.error, 'error'); return; }
+    currentPlan = null;
+    renderResults(data.results);
+    showFlash('이전 요청을 접수했습니다.', 'success');
+    setTimeout(refresh, 1500);
+  });
+});
+
+document.getElementById('cancel-btn').addEventListener('click', () => {
+  currentPlan = null;
+  planResult.hidden = true;
+});
+
+form.from.addEventListener('change', () => { fillCurrencies(); syncAmountState(); });
+currencySelect.addEventListener('change', syncAmountState);
+form.to.addEventListener('change', () => {
+  if (form.to.value === form.from.value) form.to.selectedIndex = 0;
+});
+
+/* 대시보드 자동 갱신 */
+function refresh() {
+  fetch('/api/state').then((r) => r.json()).then((data) => {
+    location.reload();
+  });
+}
+document.getElementById('refresh-btn').addEventListener('click', refresh);
+setInterval(() => { if (document.getElementById('auto-refresh').checked) refresh(); }, 30000);
+
+fillCurrencies();
+syncAmountState();
+</script>
+{% endblock %}
