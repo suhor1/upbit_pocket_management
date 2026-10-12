@@ -127,8 +127,26 @@ def test_brand_shows_upbit_pocket_manager_title(client):
     assert '<span class="brand-text">업비트 포켓 관리</span>' in body
 
 
-def test_brand_falls_back_to_letter_without_logo_file(client):
+def test_brand_uses_committed_upbit_logo_by_default(client):
+    """저장소에 로고가 포함되어 있으므로 기본 상태에서 로고를 쓴다."""
+    from upbit_pocket.web.app import find_brand_logo
+
+    assert find_brand_logo(client.application.static_folder) == "upbit-logo.png"
+
     body = client.get("/").get_data(as_text=True)
+    assert "brand-mark-fallback" not in body
+    assert '<img src="/static/upbit-logo.png"' in body
+
+
+def test_brand_falls_back_to_letter_without_logo_file(client, tmp_path):
+    """static 폴더에 로고가 없으면 U 마크로 안전하게 되돌아간다."""
+    original = client.application.static_folder
+    client.application.static_folder = str(tmp_path)
+    try:
+        body = client.get("/").get_data(as_text=True)
+    finally:
+        client.application.static_folder = original
+
     assert "brand-mark-fallback" in body
     assert "<img" not in body.split("</nav>")[0]
 
